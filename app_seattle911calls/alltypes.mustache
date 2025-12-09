@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>All 911 Call Types</title>
+    <link rel="stylesheet" href="/table.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background-color: #f4f6fb;
+        color: #111827;
+      }
+
+      .page {
+        max-width: 960px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 2rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      p {
+        margin-top: 0;
+        margin-bottom: 1.25rem;
+        color: #4b5563;
+        font-size: 0.9rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+        overflow: hidden;
+      }
+
+      thead {
+        background: #f3f4f6;
+      }
+
+      th,
+      td {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      th {
+        font-weight: 600;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      tbody tr:nth-child(even) {
+        background-color: #f9fafb;
+      }
+
+      .type-col {
+        width: 50%;
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1>All Seattle Fire Department 911 Call Types</h1>
+      <p>
+        Combined counts from historical batch layer and live speed layer.
+        New call types appear here automatically as they arrive.
+        See
+        <a href="https://web.seattle.gov/sfd/IncidentSearch/TypeCode.htm" target="_blank" rel="noopener noreferrer">
+          Seattle Fire Type Codes
+        </a>
+        for further details.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="type-col">Call type</th>
+            <th class="num">Total calls</th>
+            <th class="num">Day calls</th>
+            <th class="num">Night calls</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#rows}}
+          <tr>
+            <td class="type-col">{{type}}</td>
+            <td class="num">{{total_calls}}</td>
+            <td class="num">{{day_calls}}</td>
+            <td class="num">{{night_calls}}</td>
+          </tr>
+          {{/rows}}
+          {{^rows}}
+          <tr>
+            <td colspan="4">No call types found.</td>
+          </tr>
+          {{/rows}}
+        </tbody>
+      </table>
+    </div>
+    <script>
+      setInterval(function () {
+        window.location.reload();
+      }, 10000);
+    </script>
+  </body>
+</html>

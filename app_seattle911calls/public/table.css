@@ -1,0 +1,52 @@
+.CSS_Table_Example {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0; /* light gray border */
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08); /* soft card shadow */
+  overflow: hidden; /* ensures borders and last row are fully visible */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.CSS_Table_Example table {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse; /* clean borders */
+}
+
+.CSS_Table_Example thead tr {
+  background-color: #0f172a; /* dark slate */
+  color: #f9fafb;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.CSS_Table_Example th,
+.CSS_Table_Example td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.CSS_Table_Example tbody tr:last-child td {
+  border-bottom: none; /* avoid double border at the bottom */
+}
+
+.CSS_Table_Example tbody tr:hover {
+  background-color: #f1f5f9; /* subtle hover */
+}
+
+.CSS_Table_Example th:first-child,
+.CSS_Table_Example td:first-child {
+  text-align: left;
+}
+
+.CSS_Table_Example th:last-child,
+.CSS_Table_Example td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* nice aligned numbers */
+}

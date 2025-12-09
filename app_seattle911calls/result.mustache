@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html>
+  <head>
+    <title>911 Call Summary</title>
+    <link type="text/css" rel="stylesheet" href="table.css" />
+  </head>
+  <body style="margin:0;padding:16px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <h3 style="margin:0 0 12px 0;font-size:16px;font-weight:600;color:#0f172a;">
+      911 calls of type {{type}}
+    </h3>
+
+    <div class="CSS_Table_Example">
+      <table>
+        <tr>
+          <td>Metric</td>
+          <td>Count</td>
+        </tr>
+        <tr>
+          <td>Total calls</td>
+          <td>{{total_calls}}</td>
+        </tr>
+        <tr>
+          <td>Day calls</td>
+          <td>{{day_calls}}</td>
+        </tr>
+        <tr>
+          <td>Night calls</td>
+          <td>{{night_calls}}</td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

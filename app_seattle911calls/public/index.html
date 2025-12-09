@@ -1,0 +1,573 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Seattle Fire Dept. Dispatches Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link type="text/css" rel="stylesheet" href="elegant-aero.css" />
+    <link type="text/css" rel="stylesheet" href="table.css" />
+
+    <!-- Leaflet CSS -->
+    <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f4f6fb;
+            color: #111827;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            background: #111827;
+            color: #f9fafb;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+            gap: 1.5rem;
+            padding: 1.5rem 2rem 2rem;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+            padding: 1rem 1.25rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card h2 {
+            margin: 0 0 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .card h2 span {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #6b7280;
+        }
+
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+
+        #map-status {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .helper-note {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stats-form {
+            margin: 0;
+        }
+
+        .stats-form.elegant-aero {
+            box-shadow: none;
+            background: transparent;
+            padding: 0;
+        }
+
+        /* --- Call-type stats form --- */
+        .stats-form {
+            margin: 0;
+        }
+
+        .stats-form.elegant-aero {
+            box-shadow: none;
+            background: #f9fafb;
+            padding: 0.9rem 1rem 0.8rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stats-form .field-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-form .field-label {
+            flex: 0 0 auto;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4b5563;
+            white-space: nowrap;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            height: 36px;
+        }
+
+        .stats-form .field-input {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .stats-form select,
+        .stats-form input[type="text"] {
+            width: 100%;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            padding: 0 0.9rem;
+            font-size: 0.9rem;
+            height: 36px;
+            line-height: 36px;
+            background-color: #ffffff;
+        }
+
+        .stats-form input[type="text"]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+
+        .stats-form .field-hint {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .stats-form .actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.4rem;
+        }
+
+        .stats-form .helper-link {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .stats-form .helper-link a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .stats-form .helper-link a:hover {
+            text-decoration: underline;
+        }
+
+        iframe[name="results_iframe"] {
+            border: none;
+            width: 100%;
+            height: 260px;
+            border-radius: 0.75rem;
+            background: #f9fafb;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.4);
+        }
+
+        input[type="submit"] {
+            cursor: pointer;
+            border-radius: 999px;
+            border: none;
+            padding: 0.4rem 0.9rem;
+            background: #2563eb;
+            color: #f9fafb;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+            transition: background 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        input[type="submit"]:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        input[type="submit"]:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Recent incidents table under the map */
+        #recent-table-container {
+            margin-top: 1rem;
+        }
+
+        #recent-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        #recent-table thead {
+            background-color: #f3f4f6;
+        }
+
+        #recent-table th,
+        #recent-table td {
+            padding: 0.45rem 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        #recent-table th:nth-child(2),
+        #recent-table td:nth-child(2) {
+            white-space: normal;
+        }
+
+        #recent-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+
+<body>
+<div class="page">
+    <header>
+        <h1>Seattle Fire Department 911 Dispatches</h1>
+        <p>Live map of recent 911 dispatches and call type statistics. Updated every 5 minutes.</p>
+    </header>
+
+    <main>
+        <!-- LEFT: Map -->
+        <section class="card">
+            <h2>
+                Recent incidents map
+                <span>Showing the last 10 911 fire department dispatches in Seattle</span>
+            </h2>
+            <div id="map"></div>
+            <div id="map-status">Loading most recent incidents…</div>
+
+            <!-- Table of the same 10 most recent incidents -->
+            <div id="recent-table-container">
+                <table id="recent-table">
+                    <thead>
+                    <tr>
+                        <th>Incident</th>
+                        <th>Type</th>
+                        <th>Date / time</th>
+                        <th>Lat</th>
+                        <th>Lon</th>
+                    </tr>
+                    </thead>
+                    <tbody id="recent-tbody">
+                    <tr>
+                        <td colspan="5">Loading most recent incidents…</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- RIGHT: Call-type stats -->
+        <aside class="sidebar">
+            <section class="card">
+                <h2>
+                    Live call-type statistics (since November 7th, 2003, 9:30AM)
+                </h2>
+
+                <form
+                        action="/callsbytype.html"
+                        method="get"
+                        target="results_iframe"
+                        class="elegant-aero stats-form"
+                >
+                    <div class="field-row">
+                        <label class="field-label" for="call-type">Call type:</label>
+                        <div class="field-input">
+                            <!-- Free-text input with autocomplete suggestions. -->
+                            <input
+                                    id="call-type"
+                                    name="type"
+                                    type="text"
+                                    list="call-types-list"
+                                    placeholder="e.g. Aid Response, Medic Response…"
+                            />
+
+                            <datalist id="call-types-list">
+                                <!-- Common / high-level types first -->
+                                <option value="Aid Response"></option>
+                                <option value="Medic Response"></option>
+                                <option value="Automatic Medical Alarm"></option>
+                                <option value="Automatic Fire Alarm Resd"></option>
+                                <option value="Automatic Fire Alarm False"></option>
+                                <option value="Low Acuity Response"></option>
+                                <option value="Illegal Burn"></option>
+                                <option value="Car Fire"></option>
+                                <option value="Car Fire Freeway"></option>
+                                <option value="Rubbish Fire"></option>
+                                <option value="Fire in Building"></option>
+                                <option value="Fire In Single Family Res"></option>
+                                <option value="Auto Fire Alarm"></option>
+                                <option value="Alarm Bell"></option>
+                                <option value="Rescue Elevator"></option>
+                                <option value="MVI - Motor Vehicle Incident"></option>
+                                <option value="MVI Freeway"></option>
+                                <option value="Water Rescue Response"></option>
+                                <option value="Water Rescue Response Major"></option>
+                                <option value="Scenes Of Violence 7"></option>
+                                <option value="Scenes Of Violence 14"></option>
+                                <option value="EVENT - Special Event"></option>
+                                <option value="Poison Control"></option>
+                                <option value="Hang-Up- Aid"></option>
+                                <option value="Hang-Up- Fire"></option>
+                            </datalist>
+
+                            <span class="field-hint">
+                                Start typing and pick a call type from the suggestions.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <input type="submit" value="Show stats" />
+                    </div>
+
+                    <p class="helper-link">
+                        Or <a href="/alltypes.html" target="_blank">view all call types</a>
+                        in a separate tab.
+                    </p>
+                </form>
+            </section>
+
+            <section class="card" style="padding: 0.75rem 1rem 1rem;">
+                <h2 style="margin-bottom: 0.5rem; font-size: 1rem;">
+                    Statistics for selected call type by total, day, and night calls
+                </h2>
+                <p class="helper-note">
+                    Day calls classified as calls from 8:00AM to 8:00PM.
+                </p>
+                <iframe frameBorder="0" name="results_iframe"></iframe>
+            </section>
+        </aside>
+    </main>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    (function () {
+        const statusEl  = document.getElementById('map-status');
+        const tableBody = document.getElementById('recent-tbody');
+
+        if (typeof L === 'undefined') {
+            console.error('Leaflet (L) is not defined – JS library failed to load.');
+            if (statusEl) {
+                statusEl.textContent = 'Unable to load map library.';
+            }
+            if (tableBody) {
+                tableBody.innerHTML =
+                    '<tr><td colspan="5">Unable to load map library.</td></tr>';
+            }
+            return;
+        }
+
+        // Create the map centered on Seattle
+        const map = L.map('map').setView([47.6062, -122.3321], 11);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let markers = [];
+        let markersByIncident = {};
+
+        function formatDate(dt) {
+            if (!dt) return 'N/A';
+            const d = new Date(dt);
+            if (isNaN(d.getTime())) {
+                return dt;
+            }
+            return d.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            }) + ' PT';
+        }
+
+        function renderRecentTable(points) {
+            if (!tableBody) return;
+
+            if (!points || points.length === 0) {
+                tableBody.innerHTML =
+                    '<tr><td colspan="5">No recent incidents found in HBase.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = '';
+
+            points.slice(0, 10).forEach(function (p) {
+                const tr = document.createElement('tr');
+
+                const incident = p.incident_number || 'N/A';
+                const type     = p.type || 'Unknown';
+
+                const dt       = formatDate(p.datetime);
+
+                const latVal   = (p.lat != null ? Number(p.lat) : null);
+                const lonVal   = (p.lon != null ? Number(p.lon) : null);
+                const latDisp  = (latVal != null ? latVal.toFixed(4) : '—');
+                const lonDisp  = (lonVal != null ? lonVal.toFixed(4) : '—');
+
+                tr.innerHTML =
+                    '<td>' + incident + '</td>' +
+                    '<td>' + type + '</td>' +
+                    '<td>' + dt + '</td>' +
+                    '<td>' + latDisp + '</td>' +
+                    '<td>' + lonDisp + '</td>';
+
+                tr.dataset.incident = incident;
+                if (latVal != null && !isNaN(latVal)) tr.dataset.lat = latVal;
+                if (lonVal != null && !isNaN(lonVal)) tr.dataset.lon = lonVal;
+                tr.style.cursor = 'pointer';
+
+                tr.addEventListener('click', function () {
+                    const id  = this.dataset.incident;
+                    const mk  = markersByIncident[id];
+
+                    if (mk) {
+                        const ll = mk.getLatLng();
+                        map.setView(ll, 13, { animate: true });
+                        mk.openPopup();
+                    } else if (this.dataset.lat && this.dataset.lon) {
+                        const lat = Number(this.dataset.lat);
+                        const lon = Number(this.dataset.lon);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            map.setView([lat, lon], 13, { animate: true });
+                        }
+                    }
+                });
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function refreshRecent() {
+            if (!statusEl) return;
+
+            fetch('/recent.json')
+                .then(function (res) {
+                    if (!res.ok) {
+                        throw new Error('HTTP ' + res.status);
+                    }
+                    return res.json();
+                })
+                .then(function (points) {
+                    // Remove old markers and reset index
+                    markers.forEach(function (m) { map.removeLayer(m); });
+                    markers = [];
+                    markersByIncident = {};
+
+                    if (!points || points.length === 0) {
+                        statusEl.textContent = 'No recent incidents found in HBase.';
+                        renderRecentTable([]);
+                        return;
+                    }
+
+                    const bounds = [];
+
+                    points.forEach(function (p) {
+                        const lat = parseFloat(p.lat);
+                        const lon = parseFloat(p.lon);
+                        const incident = p.incident_number || 'N/A';
+                        const type = p.type || 'Unknown type';
+                        const dt   = formatDate(p.datetime);
+
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const marker = L.marker([lat, lon]).addTo(map);
+
+                            marker.bindPopup(
+                                '<b>' + type + '</b><br/>' +
+                                'Incident: ' + incident + '<br/>' +
+                                'Time: ' + dt
+                            );
+
+                            markers.push(marker);
+                            markersByIncident[incident] = marker;
+                            bounds.push([lat, lon]);
+                        }
+                    });
+
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [30, 30] });
+                        statusEl.textContent = 'Showing ' + bounds.length + ' most recent incidents. Click row below to isolate map marker.';
+                    } else {
+                        statusEl.textContent =
+                            'Recent incidents found, but none have valid coordinates.';
+                    }
+
+                    // Update the table with the same list
+                    renderRecentTable(points);
+                })
+                .catch(function (err) {
+                    console.error('Error loading /recent.json:', err);
+                    statusEl.textContent = 'Unable to load recent incidents.';
+                    if (tableBody) {
+                        tableBody.innerHTML =
+                            '<tr><td colspan="5">Unable to load recent incidents.</td></tr>';
+                    }
+                });
+        }
+
+        // Initial load + refresh every 10s
+        refreshRecent();
+        setInterval(refreshRecent, 10000);
+    })();
+</script>
+</body>
+</html>
