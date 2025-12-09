@@ -30,6 +30,7 @@ The dashboard is currently running at http://ec2-52-20-203-80.compute-1.amazonaw
     - A Scala Spark Streaming job consumes from that topic, deduplicates by incident number, and:
         - Updates incremental counts for each call type in `lucashou_fire_calls_by_type_speed`.
         - Maintains the **10 most recent calls** in `lucashou_fire911_recent` (rows `pos00`–`pos09`).
+        - Uses `lucashou_fire911_seen` to remember which incident numbers have already been processed so replays from Kafka do not double-count calls.
 
 - **Serving layer & web app (HBase REST + Node.js/Express)**
     - A Node.js web app talks to HBase via the REST gateway on the EMR primary node.
@@ -96,7 +97,45 @@ lucashou_seattle911calls/
 8. Build the Spark Streaming speed-layer jar, transfer onto cluster, and submit the streaming job to consume from Kafka and update the HBase speed tables.
 9. Install Node.js dependencies for the web app, start the Express app and open the dashboard URL in a browser.
 
-## 5. Limitations and Future Work
+## 5. Cluster Objects
+
+**Hive tables**
+
+- `lucashou_fire911_csv`  
+  - External CSV table pointing at `/lucashou/seattle_fire_911` in HDFS.  
+  - Mirrors the schema of the Seattle Real-Time Fire 911 Calls dataset as loaded from the CSV export.
+- `lucashou_fire911`  
+  - ORC table with cleaned records and derived fields (`hour_of_day`, `day_of_week`).  
+  - Serves as the base table for all batch aggregations.
+- `lucashou_fire_calls_by_type_batch` (created inside the batch HQL script)  
+  - Intermediate batch summary table that aggregates calls by type, and splits them into total/day/night buckets.  
+  - Used as the source for loading the HBase-backed batch table.
+- `lucashou_fire_calls_by_type` (Hive view of HBase)  
+  - Hive table backed by HBase via `hbase.columns.mapping = ":key,calls:total_calls,calls:day_calls,calls:night_calls"`.  
+  - Exposes the batch aggregates by call type to both Hive and the web app.
+
+**HBase tables**
+
+- `lucashou_fire_calls_by_type`  
+  - Column family `calls`.  
+  - Stores batch-layer counts by call type (total, day, night), one row per call type.
+- `lucashou_fire_calls_by_type_speed`  
+  - Column family `calls`.  
+  - Stores speed-layer increments (day/night deltas) by call type, updated by Spark Streaming.
+- `lucashou_fire911_recent`  
+  - Column family `loc`.  
+  - Stores up to 10 most recent calls in rows `pos00`–`pos09` with incident number, type, datetime, latitude, and longitude for the map view.
+- `lucashou_fire911_seen`  
+  - Column family `i`.  
+  - Tracks which incident numbers have already been processed by the speed layer to avoid double-counting.
+
+**Kafka topic**
+
+- `mpcs53014_lucashou_fire911_v2`  
+  - Kafka topic used by the Java producer to publish new 911 call records as JSON.  
+  - The Spark Streaming job consumes from this topic to update the speed-layer HBase tables.
+
+## 6. Limitations and Future Work
 
 This project implements the core pieces of the lambda architecture for Seattle 911 calls (batch, speed, and serving layers). There are several natural extensions that would make it closer to a production system:
 
