@@ -16,17 +16,19 @@ yarn-error.log*
 .settings/
 
 # -------------------------
-# IDE / editor metadata
+# IDE metadata
 # -------------------------
 .idea/
 **/.idea/
 *.swp
 
 # -------------------------
-# OS cruft
+# OS stuff
 # -------------------------
 .DS_Store
 Thumbs.db
 
+# -------------------------
 # CSV File
+# -------------------------
 batch_layer/Seattle_Real_Time_Fire_911_Calls_20251130.csv
