@@ -11,7 +11,7 @@ The dashboard is currently running at http://ec2-52-20-203-80.compute-1.amazonaw
 **Data sources**
 
 - Historical CSV export of Seattle Fire 911 calls from the City of Seattle open data portal, available at https://data.seattle.gov/Public-Safety/Seattle-Real-Time-Fire-911-Calls/kzjm-xkqj/about_data.
-- The batch used in this project covers calls from November 7, 2003, 09:30 AM through November 30, 2025, 20:23:00.
+- The batch used in this project covers calls from November 7, 2003, 09:30 AM through November 30, 2025, 8:23 PM.
 - Live 911 call data from the Seattle open data API (polled periodically by a Kafka producer), with API documentation at https://dev.socrata.com/foundry/data.seattle.gov/kzjm-xkqj.
 
 **Layers**
@@ -29,16 +29,16 @@ The dashboard is currently running at http://ec2-52-20-203-80.compute-1.amazonaw
         - `mpcs53014_lucashou_fire911_v2`
     - A Scala Spark Streaming job consumes from that topic, deduplicates by incident number, and:
         - Updates incremental counts for each call type in `lucashou_fire_calls_by_type_speed`.
-        - Maintains the **10 most recent calls** in `lucashou_fire911_recent` (rows `pos00`–`pos09`).
+        - Maintains the 10 most recent calls in `lucashou_fire911_recent` (rows `pos00`–`pos09`).
         - Uses `lucashou_fire911_seen` to remember which incident numbers have already been processed so replays from Kafka do not double-count calls.
 
 - **Serving layer & web app (HBase REST + Node.js/Express)**
     - A Node.js web app talks to HBase via the REST gateway on the EMR primary node.
-    - It joins:
-        - **Batch counts** from `lucashou_fire_calls_by_type`
-        - **Speed-layer deltas** from `lucashou_fire_calls_by_type_speed`
-        - **Recent incidents** from `lucashou_fire911_recent`
-    - It exposes:
+    - It combines:
+        - Batch counts from `lucashou_fire_calls_by_type`
+        - Speed-layer deltas from `lucashou_fire_calls_by_type_speed`
+        - Recent incidents from `lucashou_fire911_recent`
+    - It displays:
         - A Leaflet map of the most recent calls.
         - A per–call-type stats view (total/day/night).
         - A table of all call types with live totals (batch + streaming).
