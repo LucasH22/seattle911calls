@@ -1,4 +1,4 @@
-# Seattle 911 Calls – Lambda Architecture Project
+# Seattle Fire Department 911 Dispatches – MPCS 53014 Final Project
 
 This project implements a lambda-architecture application for Seattle Fire Department 911 dispatches. It ingests historical call data into Hive (batch layer), streams new calls from the live Seattle 911 API into Kafka and Spark Streaming (speed layer), and runs a web dashboard via a Node.js/Express app backed by HBase (serve layer).
 
@@ -78,7 +78,58 @@ lucashou_seattle911calls/
       table.css
 ```
 
-## 3. Prerequisites
+## 3. Cluster deployment locations
+
+- **EMR primary node**
+  - `/home/hadoop/lucashou/` – contains the two uberjars and Hive scripts:
+    - `uber-StreamFire911IntoKafka-1.0-SNAPSHOT.jar`
+    - `uber-StreamFire911SpeedLayer-1.0-SNAPSHOT.jar`
+    - `lucashou_hive_fire911.hql`, `lucashou_fire_calls_batch.hql`, `lucashou_fire_calls_hbase.hql`
+- **HDFS**
+  - Historical CSV snapshot directory: `/lucashou/seattle_fire_911`  
+    - Can be listed with: `hdfs dfs -ls /lucashou/seattle_fire_911`
+- **Web server node**
+  - `/home/ec2-user/lucashou/app_seattle911calls` – deployed Node/Express web app that serves the dashboard.
+
+## 4. Cluster Objects
+
+**Hive tables**
+
+- `lucashou_fire911_csv`
+    - External CSV table pointing at `/lucashou/seattle_fire_911` in HDFS.
+    - Mirrors the schema of the Seattle Real-Time Fire 911 Calls dataset as loaded from the CSV export.
+- `lucashou_fire911`
+    - ORC table with cleaned records and derived fields (`hour_of_day`, `day_of_week`).
+    - Serves as the base table for all batch aggregations.
+- `lucashou_fire_calls_by_type_batch` (created inside the batch HQL script)
+    - Intermediate batch summary table that aggregates calls by type, and splits them into total/day/night buckets.
+    - Used as the source for loading the HBase-backed batch table.
+- `lucashou_fire_calls_by_type` (Hive view of HBase)
+    - Hive table backed by HBase via `hbase.columns.mapping = ":key,calls:total_calls,calls:day_calls,calls:night_calls"`.
+    - Exposes the batch aggregates by call type to both Hive and the web app.
+
+**HBase tables**
+
+- `lucashou_fire_calls_by_type`
+    - Column family `calls`.
+    - Stores batch-layer counts by call type (total, day, night), one row per call type.
+- `lucashou_fire_calls_by_type_speed_v2`
+    - Column family `calls`.
+    - Stores speed-layer increments (day/night deltas) by call type, updated by Spark Streaming.
+- `lucashou_fire911_recent_v2`
+    - Column family `loc`.
+    - Stores up to 10 most recent calls in rows `pos00`–`pos09` with incident number, type, datetime, latitude, and longitude for the map view.
+- `lucashou_fire911_seen`
+    - Column family `i`.
+    - Tracks which incident numbers have already been processed by the speed layer to avoid double-counting.
+
+**Kafka topic**
+
+- `mpcs53014_lucashou_fire911_v2`
+    - Kafka topic used by the Java producer to publish new 911 call records as JSON.
+    - The Spark Streaming job consumes from this topic to update the speed-layer HBase tables.
+
+## 5. Prerequisites
 
 - Access to the course EMR cluster with HDFS, Hive, HBase, and Spark configured.
 - Access to the course Kafka cluster plus `kafka.client.properties` file.
@@ -87,7 +138,7 @@ lucashou_seattle911calls/
 - Socrata API credentials for the Seattle 911 API, set via environment variables on the producer host.
 - The HBase REST server enabled and reachable from the web app host.
 
-## 4. End-to-End Workflow
+## 6. End-to-End Workflow
 
 1. Upload the historical Seattle 911 CSV into HDFS.  
 2. Run the Hive script to create the external CSV table and the cleaned ORC table with derived time fields.  
@@ -99,45 +150,8 @@ lucashou_seattle911calls/
 8. Build the Spark Streaming speed-layer jar, transfer onto cluster, and submit the streaming job to consume from Kafka and update the HBase speed tables.
 9. Install Node.js dependencies for the web app, start the Express app and open the dashboard URL in a browser.
 
-## 5. Cluster Objects
 
-**Hive tables**
-
-- `lucashou_fire911_csv`  
-  - External CSV table pointing at `/lucashou/seattle_fire_911` in HDFS.  
-  - Mirrors the schema of the Seattle Real-Time Fire 911 Calls dataset as loaded from the CSV export.
-- `lucashou_fire911`  
-  - ORC table with cleaned records and derived fields (`hour_of_day`, `day_of_week`).  
-  - Serves as the base table for all batch aggregations.
-- `lucashou_fire_calls_by_type_batch` (created inside the batch HQL script)  
-  - Intermediate batch summary table that aggregates calls by type, and splits them into total/day/night buckets.  
-  - Used as the source for loading the HBase-backed batch table.
-- `lucashou_fire_calls_by_type` (Hive view of HBase)  
-  - Hive table backed by HBase via `hbase.columns.mapping = ":key,calls:total_calls,calls:day_calls,calls:night_calls"`.  
-  - Exposes the batch aggregates by call type to both Hive and the web app.
-
-**HBase tables**
-
-- `lucashou_fire_calls_by_type`  
-  - Column family `calls`.  
-  - Stores batch-layer counts by call type (total, day, night), one row per call type.
-- `lucashou_fire_calls_by_type_speed`  
-  - Column family `calls`.  
-  - Stores speed-layer increments (day/night deltas) by call type, updated by Spark Streaming.
-- `lucashou_fire911_recent`  
-  - Column family `loc`.  
-  - Stores up to 10 most recent calls in rows `pos00`–`pos09` with incident number, type, datetime, latitude, and longitude for the map view.
-- `lucashou_fire911_seen`  
-  - Column family `i`.  
-  - Tracks which incident numbers have already been processed by the speed layer to avoid double-counting.
-
-**Kafka topic**
-
-- `mpcs53014_lucashou_fire911_v2`  
-  - Kafka topic used by the Java producer to publish new 911 call records as JSON.  
-  - The Spark Streaming job consumes from this topic to update the speed-layer HBase tables.
-
-## 6. Limitations and Future Work
+## 7. Limitations and Future Work
 
 This project implements the core pieces of the lambda architecture for Seattle 911 calls (batch, speed, and serving layers). There are several natural extensions that would make it closer to a production system:
 
