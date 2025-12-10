@@ -41,8 +41,8 @@ object StreamCalls {
   val hbaseConf: Configuration = HBaseConfiguration.create()
   val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
   val seenTable = hbaseConnection.getTable(TableName.valueOf("lucashou_fire911_seen"))
-  val callsTable = hbaseConnection.getTable(TableName.valueOf("lucashou_fire_calls_by_type_speed"))
-  val recentTable = hbaseConnection.getTable(TableName.valueOf("lucashou_fire911_recent"))
+  val callsTable = hbaseConnection.getTable(TableName.valueOf("lucashou_fire_calls_by_type_speed_v2"))
+  val recentTable = hbaseConnection.getTable(TableName.valueOf("lucashou_fire911_recent_v2"))
 
   val SeattleZone: ZoneId = ZoneId.of("America/Los_Angeles")
 

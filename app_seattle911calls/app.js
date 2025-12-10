@@ -25,21 +25,27 @@ const hclient = hbase({
 
 // Converts HBase cell to a JS number
 function counterToNumber(c) {
-    const buf = Buffer.isBuffer(c) ? c : Buffer.from(c);
+    if (c == null) return NaN;
 
-    // Case 1: 8-byte binary long (true HBase counter)
-    if (buf.length === 8) {
-        try {
-            return Number(buf.readBigInt64BE());
-        } catch (e) {
-            // fall through to string parse if something is weird
-        }
+    // If it's already a number, just use it
+    if (typeof c === 'number') {
+        return c;
     }
 
-    const s = buf.toString('utf8').trim();
-    const n = Number(s);
-    if (!Number.isNaN(n)) {
-        return n;
+    // If it's a string, try plain numeric
+    if (typeof c === 'string') {
+        const trimmed = c.trim();
+        const asNum = Number(trimmed);
+        if (!Number.isNaN(asNum)) {
+            return asNum;
+        }
+
+        // Otherwise treat it as latin1-encoded binary (8-byte HBase counter)
+        const buf = Buffer.from(c, 'latin1');
+        if (buf.length === 8) {
+            return Number(buf.readBigInt64BE());
+        }
+        return NaN;
     }
 
     return NaN;
@@ -120,7 +126,7 @@ hclient.table('lucashou_fire_calls_by_type')
 // Serve static files from ./public
 app.use(express.static('public'));
 
-// Dynamic endpoint: /delays.html -> merged batch + speed stats for a given type
+// Dynamic endpoint: /callsbytype.html -> merged batch + speed stats for a given type
 app.get('/callsbytype.html', function (req, res) {
     const rawType = req.query['type'] || '';
     const callType = rawType.trim();
@@ -154,7 +160,7 @@ app.get('/callsbytype.html', function (req, res) {
 
             // 2) Read speed table (deltas since last batch)
             hclient
-                .table('lucashou_fire_calls_by_type_speed')
+                .table('lucashou_fire_calls_by_type_speed_v2')
                 .row(callType)
                 .get(function (err2, speedCells) {
                     let speedStats = { day: 0, night: 0 };
@@ -193,7 +199,7 @@ app.get('/callsbytype.html', function (req, res) {
 // View all call types (batch + speed layer, live)
 app.get('/alltypes.html', (req, res) => {
     const batchTable = 'lucashou_fire_calls_by_type';
-    const speedTable = 'lucashou_fire_calls_by_type_speed';
+    const speedTable = 'lucashou_fire_calls_by_type_speed_v2';
 
     // Aggregated stats from each table
     const batch = {};
@@ -250,7 +256,7 @@ app.get('/alltypes.html', (req, res) => {
                 .scan({ maxVersions: 1 }, (err2, cells2) => {
                     if (err2) {
                         console.error('Error scanning speed table:', err2);
-                        res.status(500).send('Error scanning lucashou_fire_calls_by_type_speed');
+                        res.status(500).send('Error scanning lucashou_fire_calls_by_type_speed_v2');
                         return;
                     }
 
@@ -327,7 +333,7 @@ app.get('/recent.json', function (req, res) {
 
     keys.forEach((rk, index) => {
         hclient
-            .table('lucashou_fire911_recent')
+            .table('lucashou_fire911_recent_v2')
             .row(rk)
             .get(function (err, cells) {
                 if (responded) {
