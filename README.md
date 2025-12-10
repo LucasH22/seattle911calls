@@ -4,6 +4,8 @@ This project implements a lambda-architecture application for Seattle Fire Depar
 
 The dashboard is currently running at http://ec2-52-20-203-80.compute-1.amazonaws.com:3017/.
 
+A 5 minute video demo can be found here: https://www.loom.com/share/7de46827ccd245f4915c74fe316dcf3e
+
 ---
 
 ## 1. Architecture Overview
